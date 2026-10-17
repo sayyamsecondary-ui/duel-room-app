@@ -1,0 +1,8 @@
+{
+  "name": "duel-room",
+  "version": "1.0.0",
+  "description": "Two-player online mini-games with room codes. Installable web app plus a tiny WebSocket server with no dependencies.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
