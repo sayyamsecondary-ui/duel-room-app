@@ -1,10 +1,10 @@
 # Duel Room
 
-Two phones, one room code, fourteen quick games, plus a 5-game tournament.
+Two phones, one room code, eighteen quick games, plus a 5-game tournament.
 Everything runs from this folder: a tiny Node server (no dependencies, needs Node 18 or newer) plus an installable web app (PWA).
 
 Games: Tic-Tac-Toe, Drop Four, Rock Paper Scissors, Tap Duel, Quick Math, Ping Pong, Air Hockey,
-Snake Duel, Sumo Push, Penalty Kicks, Guess the Person, Odd One Out, Cornhole, Bowling.
+Snake Duel, Sumo Push, Penalty Kicks, Guess the Person, Odd One Out, Cornhole, Bowling, Paint Fight, Sword Duel, Road Rush, Chess.
 
 ## Run it on your computer (both phones on the same Wi-Fi)
 

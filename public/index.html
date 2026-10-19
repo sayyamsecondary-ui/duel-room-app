@@ -141,6 +141,14 @@ input[type="text"] {
 .disc.p1 { background: var(--p1); }
 .disc.win { box-shadow: 0 0 0 3px var(--ink); }
 
+.chess { display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 12px; overflow: hidden; max-width: 440px; margin: 0 auto; border: 3px solid var(--ink); }
+.sq { aspect-ratio: 1; border: 0; padding: 0; margin: 0; display: grid; place-items: center; cursor: pointer; font-size: min(8.4vw, 36px); line-height: 1; background: #ecdfc8; font-family: 'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols',sans-serif; }
+.sq.dk { background: #b58f6a; }
+.sq.sel { background: #f2d45c; }
+.sq.mv { box-shadow: inset 0 0 0 4px rgba(40,160,80,.75); }
+.sq.lm { background: #cfe08a; }
+.sq.chk { background: #e8826f; }
+.sq .pc { text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 1px 2px rgba(0,0,0,.5); }
 .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .pick { font: 700 14px var(--font-body); color: var(--ink); background: var(--surface); border: 3px solid var(--line); border-radius: 16px; padding: 18px 6px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
 .pick .ico { width: 44px; height: 44px; }
@@ -299,7 +307,11 @@ input[type="text"] {
     who: { name: 'Guess the Person', desc: 'Ask yes or no questions to find their person' },
     odd: { name: 'Odd One Out', desc: 'Find the different symbol first' },
     cornhole: { name: 'Cornhole', desc: 'Toss bags at the hole, 3 each' },
-    bowl: { name: 'Bowling', desc: 'Five frames, aim and time your roll' }
+    bowl: { name: 'Bowling', desc: 'Five frames, aim and time your roll' },
+    paint: { name: 'Paint Fight', desc: 'Cover more of the paper in your color' },
+    sword: { name: 'Sword Duel', desc: 'Dodge the spinning blade, land hits' },
+    road: { name: 'Road Rush', desc: 'Steer clear of the falling crates' },
+    chess: { name: 'Chess', desc: 'Classic chess, checkmate wins' }
   };
   var ICONS = {
     ttt: '<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',
@@ -316,6 +328,10 @@ input[type="text"] {
     cornhole: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/>',
     bowl: '<circle cx="9" cy="16" r="4.5"/><path d="M16 4c-2 0-2 2-1 4s1 3 0 5h5c-1-2-1-3 0-5s1-4-1-4z"/>',
     odd: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><circle cx="17" cy="17" r="3.2"/>',
+    paint: '<path d="M5 19c0-4 3-3 3-6 0-2 2-3 4-3s4 2 4 5c0 2 3 1 3 4z"/><circle cx="8" cy="6" r="1.8"/><circle cx="16" cy="5" r="1.4"/>',
+    sword: '<path d="M5 19L18 6M15 4h5v5M4 16l4 4M3 21l3-3"/>',
+    road: '<path d="M8 3L5 21M16 3l3 18M12 5v3M12 11v3M12 17v3"/>',
+    chess: '<path d="M8 20h8M9 20c0-4 1-5 1-8-2-1-2-3-1-5l3-3 3 3c1 2 1 4-1 5 0 3 1 4 1 8"/>',
     r: '<circle cx="12" cy="12" r="7"/>',
     p: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8.5 9h7M8.5 13h7"/>',
     s: '<circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M9 14.5L17 4M15 14.5L7 4"/>'
@@ -388,9 +404,9 @@ input[type="text"] {
   }
 
   /* ---------- real-time games (host runs the physics, guests send inputs) ---------- */
-  var RT = { pong: 1, hockey: 1, sumo: 1, snake: 1 };
-  var DIM = { pong: { W: 300, H: 480, flip: true }, hockey: { W: 300, H: 480, flip: true }, sumo: { W: 320, H: 320, flip: false }, snake: { W: 240, H: 240, flip: false } };
-  var HINT = { pong: 'Slide your paddle. First to 3', hockey: 'Drag your mallet. First to 3', sumo: 'Drag to steer and shove. First to 2', snake: 'Tap the left or right side to turn' };
+  var RT = { pong: 1, hockey: 1, sumo: 1, snake: 1, paint: 1, sword: 1, road: 1 };
+  var DIM = { pong: { W: 300, H: 480, flip: true }, hockey: { W: 300, H: 480, flip: true }, sumo: { W: 320, H: 320, flip: false }, snake: { W: 240, H: 240, flip: false }, paint: { W: 300, H: 400, flip: false }, sword: { W: 320, H: 320, flip: false }, road: { W: 300, H: 480, flip: false } };
+  var HINT = { pong: 'Slide your paddle. First to 3', hockey: 'Drag your mallet. First to 3', sumo: 'Drag to steer and shove. First to 2', snake: 'Tap the left or right side to turn', paint: 'Drag to paint. Most color after 30 seconds wins', sword: 'Drag to move. Your blade spins on its own. 3 hits and you are out', road: 'Drag left and right. Dodge the crates, 3 lives' };
   var sim = null, simTimer = null, inputs = [null, null], lastSimGame = null, hostPen = [null, null];
   /*SIMS-START*/
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -556,6 +572,108 @@ input[type="text"] {
       }
     },
     frame: function (s) { return { g: 'snake', ph: s.ph, cd: Math.ceil(s.t), n: s.n, a: s.rec[0].slice(), b: s.rec[1].slice(), d: s.dead.slice() }; }
+  };
+  SIMS.paint = {
+    init: function () { var g = []; for (var i = 0; i < 300; i++) g.push(0); return { ph: 'ready', t: 1.2, p: [[60, 340], [240, 60]], g: g, left: 30, done: false, winner: null }; },
+    step: function (s, dt, inp) {
+      var i, k;
+      if (s.ph === 'ready') { s.t -= dt; if (s.t <= 0) s.ph = 'play'; return; }
+      for (i = 0; i < 2; i++) {
+        var t = inp[i];
+        if (t) {
+          var dx = clamp(t.x, 12, 288) - s.p[i][0], dy = clamp(t.y, 12, 388) - s.p[i][1], d = Math.hypot(dx, dy), st = Math.min(d, 170 * dt);
+          if (d > 0) { s.p[i][0] += dx / d * st; s.p[i][1] += dy / d * st; }
+        }
+        for (k = 0; k < 300; k++) {
+          var cx = (k % 15) * 20 + 10, cy = Math.floor(k / 15) * 20 + 10;
+          if (Math.hypot(cx - s.p[i][0], cy - s.p[i][1]) < 22) s.g[k] = i + 1;
+        }
+      }
+      s.left -= dt;
+      if (s.left <= 0) {
+        var a = 0, b = 0;
+        for (k = 0; k < 300; k++) { if (s.g[k] === 1) a++; else if (s.g[k] === 2) b++; }
+        s.done = true; s.winner = a === b ? 'draw' : (a > b ? 0 : 1);
+      }
+    },
+    frame: function (s) {
+      var a = 0, b = 0, k;
+      for (k = 0; k < 300; k++) { if (s.g[k] === 1) a++; else if (s.g[k] === 2) b++; }
+      return { g: 'paint', ph: s.ph, cd: Math.ceil(s.t), p: [Math.round(s.p[0][0]), Math.round(s.p[0][1]), Math.round(s.p[1][0]), Math.round(s.p[1][1])], s: [0, 0], gr: s.g.join(''), n: [a, b], left: Math.max(0, Math.ceil(s.left)) };
+    }
+  };
+  SIMS.sword = {
+    init: function () { return { ph: 'ready', t: 1.2, p: [[90, 160], [230, 160]], v: [[0, 0], [0, 0]], a: [0, Math.PI], hp: [3, 3], inv: [0, 0], done: false, winner: null }; },
+    step: function (s, dt, inp) {
+      var i, R = 17, L = 36;
+      if (s.ph === 'ready') { s.t -= dt; if (s.t <= 0) s.ph = 'play'; return; }
+      for (i = 0; i < 2; i++) {
+        var t = inp[i];
+        if (t) {
+          var dx = clamp(t.x, 0, 320) - s.p[i][0], dy = clamp(t.y, 0, 320) - s.p[i][1], d = Math.hypot(dx, dy);
+          if (d > 2) { var ac = Math.min(1, d / 40) * 700; s.v[i][0] += dx / d * ac * dt; s.v[i][1] += dy / d * ac * dt; }
+        }
+        var f = Math.pow(0.12, dt); s.v[i][0] *= f; s.v[i][1] *= f;
+        var sp = Math.hypot(s.v[i][0], s.v[i][1]);
+        if (sp > 190) { s.v[i][0] *= 190 / sp; s.v[i][1] *= 190 / sp; }
+        s.p[i][0] = clamp(s.p[i][0] + s.v[i][0] * dt, R, 320 - R); s.p[i][1] = clamp(s.p[i][1] + s.v[i][1] * dt, R, 320 - R);
+        s.a[i] += (i === 0 ? 6.5 : -6.5) * dt;
+        if (s.inv[i] > 0) s.inv[i] -= dt;
+      }
+      var ax = s.p[1][0] - s.p[0][0], ay = s.p[1][1] - s.p[0][1], dd = Math.hypot(ax, ay);
+      if (dd < 2 * R && dd > 0) {
+        var nx = ax / dd, ny = ay / dd, ov = (2 * R - dd) / 2;
+        s.p[0][0] -= nx * ov; s.p[0][1] -= ny * ov; s.p[1][0] += nx * ov; s.p[1][1] += ny * ov;
+      }
+      for (i = 0; i < 2; i++) {
+        var o = 1 - i;
+        if (s.inv[o] > 0) continue;
+        var hit = false;
+        for (var q = 0.5; q <= 1.001; q += 0.25) {
+          var tx = s.p[i][0] + Math.cos(s.a[i]) * L * q, ty = s.p[i][1] + Math.sin(s.a[i]) * L * q;
+          if (Math.hypot(tx - s.p[o][0], ty - s.p[o][1]) < R - 1) hit = true;
+        }
+        if (hit) {
+          s.hp[o]--; s.inv[o] = 0.9;
+          var kx = s.p[o][0] - s.p[i][0], ky = s.p[o][1] - s.p[i][1], kd = Math.hypot(kx, ky) || 1;
+          s.v[o][0] = kx / kd * 320; s.v[o][1] = ky / kd * 320;
+        }
+      }
+      if (s.hp[0] <= 0 || s.hp[1] <= 0) { s.done = true; s.winner = s.hp[0] <= 0 && s.hp[1] <= 0 ? 'draw' : (s.hp[0] > 0 ? 0 : 1); }
+    },
+    frame: function (s) {
+      return { g: 'sword', ph: s.ph, cd: Math.ceil(s.t), p: [Math.round(s.p[0][0]), Math.round(s.p[0][1]), Math.round(s.p[1][0]), Math.round(s.p[1][1])], s: [0, 0],
+        a: [Math.round(s.a[0] * 100) / 100, Math.round(s.a[1] * 100) / 100], hp: s.hp.slice(), inv: [s.inv[0] > 0 ? 1 : 0, s.inv[1] > 0 ? 1 : 0] };
+    }
+  };
+  SIMS.road = {
+    init: function () { return { ph: 'ready', t: 1.2, p: [100, 200], hp: [3, 3], inv: [0, 0], ob: [], sp: 0.5, el: 0, off: 0, left: 45, done: false, winner: null }; },
+    step: function (s, dt, inp) {
+      var i, k;
+      if (s.ph === 'ready') { s.t -= dt; if (s.t <= 0) s.ph = 'play'; return; }
+      s.el += dt; s.left -= dt;
+      var spd = 190 + Math.min(s.el, 40) * 6;
+      s.off = (s.off + spd * dt) % 60;
+      s.sp -= dt;
+      if (s.sp <= 0) { s.ob.push([22 + Math.random() * 256, -20]); s.sp = Math.max(0.28, 0.6 - s.el * 0.008); }
+      for (k = s.ob.length - 1; k >= 0; k--) { s.ob[k][1] += spd * dt; if (s.ob[k][1] > 510) s.ob.splice(k, 1); }
+      for (i = 0; i < 2; i++) {
+        if (s.hp[i] <= 0) continue;
+        var t = inp[i];
+        if (t) s.p[i] += clamp(clamp(t.x, 18, 282) - s.p[i], -280 * dt, 280 * dt);
+        if (s.inv[i] > 0) { s.inv[i] -= dt; continue; }
+        for (k = 0; k < s.ob.length; k++) {
+          if (Math.abs(s.ob[k][0] - s.p[i]) < 26 && Math.abs(s.ob[k][1] - 420) < 30) { s.hp[i]--; s.inv[i] = 1; s.ob.splice(k, 1); break; }
+        }
+      }
+      var a0 = s.hp[0] > 0, a1 = s.hp[1] > 0;
+      if (!a0 || !a1) { s.done = true; s.winner = (!a0 && !a1) ? 'draw' : (a0 ? 0 : 1); }
+      else if (s.left <= 0) { s.done = true; s.winner = s.hp[0] === s.hp[1] ? 'draw' : (s.hp[0] > s.hp[1] ? 0 : 1); }
+    },
+    frame: function (s) {
+      var o = []; s.ob.forEach(function (b) { o.push(Math.round(b[0]), Math.round(b[1])); });
+      return { g: 'road', ph: s.ph, cd: Math.ceil(s.t), p: [Math.round(s.p[0]), Math.round(s.p[1])], s: [0, 0], hp: s.hp.slice(), inv: [s.inv[0] > 0 ? 1 : 0, s.inv[1] > 0 ? 1 : 0], ob: o, off: Math.round(s.off), left: Math.max(0, Math.ceil(s.left)) };
+    }
   };
   /*SIMS-END*/
   function stopSim() { clearInterval(simTimer); simTimer = null; sim = null; }
@@ -737,7 +855,7 @@ input[type="text"] {
     newRound();
   }
   function startTour() {
-    var st = S.st, keys = Object.keys(GAMES);
+    var st = S.st, keys = Object.keys(GAMES).filter(function (k) { return k !== 'chess'; });
     for (var i = keys.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = keys[i]; keys[i] = keys[j]; keys[j] = t; }
     keys = keys.slice(0, 5);
     st.mode = 'tour'; st.tour = { games: keys, idx: 0, res: [], done: false };
@@ -753,7 +871,7 @@ input[type="text"] {
       if (st.tour.idx >= st.tour.games.length) {
         if (st.scores[0] !== st.scores[1]) { st.tour.done = true; return; }
         var last = st.tour.games[st.tour.games.length - 1];
-        var pool = Object.keys(GAMES).filter(function (k) { return k !== last; });
+        var pool = Object.keys(GAMES).filter(function (k) { return k !== last && k !== 'chess'; });
         st.tour.games.push(pool[Math.floor(Math.random() * pool.length)]);
       }
       st.game = st.tour.games[st.tour.idx];
@@ -797,6 +915,7 @@ input[type="text"] {
     st.gw = st.game === 'who' ? { seed: Math.floor(Math.random() * 1e9), phase: 'pick', picked: [false, false], log: [], reveal: null, guess: null } : null;
     st.find = null; hostFind = null;
     st.ch = st.game === 'cornhole' ? { shot: 0, pts: [0, 0], bags: [], last: null } : null;
+    st.ch = st.game === 'chess' ? { b: CH_START, w: st.turn, last: null, chk: false } : null;
     st.bw = st.game === 'bowl' ? { pins: new Array(10).fill(true), roll: 0, rolls: [], tot: [0, 0], fs: [[], []], lastRoll: null } : null;
     if (st.game === 'odd') {
       var pr = PAIRS[Math.floor(Math.random() * PAIRS.length)];
@@ -869,6 +988,15 @@ input[type="text"] {
       LINES.forEach(function (L) { if (!w && b[L[0]] === seat && b[L[1]] === seat && b[L[2]] === seat) w = L; });
       full = b.every(function (v) { return v !== -1; });
       if (w) finish(seat, w); else if (full) finish('draw'); else st.turn = 1 - seat;
+    } else if (st.game === 'chess') {
+      var ch = st.ch, col = seat === ch.w ? 'w' : 'b', f = a.f, to = a.to;
+      if (!ch || !Number.isInteger(f) || !Number.isInteger(to) || f < 0 || f > 63 || to < 0 || to > 63) return;
+      var lm = chessLegal(ch.b, col, f);
+      if (lm.indexOf(to) < 0) return;
+      ch.b = chessApply(ch.b, f, to); ch.last = [f, to];
+      var oc = col === 'w' ? 'b' : 'w', has = chessHasMove(ch.b, oc);
+      ch.chk = chessInCheck(ch.b, oc);
+      if (!has) finish(ch.chk ? seat : 'draw'); else st.turn = 1 - seat;
     } else if (st.game === 'c4') {
       var c = a.c;
       if (!Number.isInteger(c) || c < 0 || c > 6) return;
@@ -1063,7 +1191,8 @@ input[type="text"] {
       if (st.result === 'draw') return 'Draw';
       return st.result === seat ? 'You win' : nm(st.result) + ' wins';
     }
-    if (st.game === 'ttt' || st.game === 'c4') return st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn';
+    if (st.game === 'chess') return (st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn') + (st.ch && st.ch.chk ? ' (check)' : '');
+    if (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess') return st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn';
     if (st.game === 'rps') {
       if (seat >= 0 && st.rps.locked[seat]) return 'Locked in. Waiting for ' + nm(1 - seat);
       return 'Choose one';
@@ -1116,7 +1245,7 @@ input[type="text"] {
     } else pips.hidden = true;
     var sc = $('score'); sc.replaceChildren();
     [0, 1].forEach(function (i) {
-      var active = !st.over && (st.game === 'ttt' || st.game === 'c4' || st.game === 'cornhole' || st.game === 'bowl') && st.turn === i;
+      var active = !st.over && (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess' || st.game === 'cornhole' || st.game === 'bowl') && st.turn === i;
       sc.append(h('div', { class: 'pl p' + i + (active ? ' active' : '') },
         h('div', { class: 'who' }, h('span', { class: 'dot p' + i }), h('span', { text: nm(i) + (seat === i ? ' (you)' : '') })),
         h('div', { class: 'n', text: String(st.scores[i]) })));
@@ -1124,7 +1253,7 @@ input[type="text"] {
     var stat = $('status');
     var tourDone = st.mode === 'tour' && st.tour && st.tour.done;
     stat.textContent = tourDone ? finalText(st, seat) : statusText(st, seat);
-    stat.className = 'status' + ((!st.over && st.turn === seat && (st.game === 'ttt' || st.game === 'c4' || st.game === 'cornhole' || st.game === 'bowl')) ? ' mine' : '');
+    stat.className = 'status' + ((!st.over && st.turn === seat && (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess' || st.game === 'cornhole' || st.game === 'bowl')) ? ' mine' : '');
     var body = $('body'); body.replaceChildren(); S.meterEl = null;
     if (st.round !== S.pickRound) {
       S.pickRound = st.round; S.myPick = null; S.frame = null; S.disp = null; S.trail = [new Set(), new Set()]; S.snN = -1; S.pendingIn = null; S.sentIn = ''; S.gwSel = null; S.gwOut = new Set(); S.gwMine = null;
@@ -1132,6 +1261,7 @@ input[type="text"] {
     if (tourDone) body.append(finalView(st));
     else if (st.game === 'ttt') body.append(tttView(st, seat));
     else if (st.game === 'c4') body.append(c4View(st, seat));
+    else if (st.game === 'chess') body.append(chessView(st, seat));
     else if (st.game === 'rps') body.append(rpsView(st, seat));
     else if (st.game === 'tap') body.append(tapView(st, seat));
     else if (st.game === 'math') body.append(mathView(st, seat));
@@ -1146,7 +1276,85 @@ input[type="text"] {
     if (st.mode === 'tour' && st.tour) {
       var lastGame = st.tour.idx + 1 >= st.tour.games.length;
       again.textContent = st.tour.done ? 'Back to games' : st.result === 'draw' ? 'Draw. Replay this game' : lastGame ? (st.scores[0] === st.scores[1] ? 'Tied. Play a decider' : 'See the result') : 'Next game';
-    } else again.textContent = (st.game === 'ttt' || st.game === 'c4') ? 'Play again' : 'Next round';
+    } else again.textContent = (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess') ? 'Play again' : 'Next round';
+  }
+  /* ---------- chess (no castling or en passant, pawns promote to queens) ---------- */
+  var CH_START = 'rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR';
+  var CH_GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+  function chColor(ch) { return ch === '.' ? null : (ch === ch.toUpperCase() ? 'w' : 'b'); }
+  function chessPseudo(b, col, i) {
+    var pc = b.charAt(i), t = pc.toLowerCase(), r = Math.floor(i / 8), c = i % 8, out = [], k, j;
+    function add(rr, cc, mode) {
+      if (rr < 0 || rr > 7 || cc < 0 || cc > 7) return false;
+      var q = b.charAt(rr * 8 + cc), qc = chColor(q);
+      if (mode === 'cap') { if (qc && qc !== col) out.push(rr * 8 + cc); return false; }
+      if (mode === 'mov') { if (!qc) { out.push(rr * 8 + cc); return true; } return false; }
+      if (qc === col) return false;
+      out.push(rr * 8 + cc);
+      return !qc;
+    }
+    if (t === 'p') {
+      var dir = col === 'w' ? -1 : 1, start = col === 'w' ? 6 : 1;
+      if (add(r + dir, c, 'mov') && r === start) add(r + 2 * dir, c, 'mov');
+      add(r + dir, c - 1, 'cap'); add(r + dir, c + 1, 'cap');
+    } else if (t === 'n') {
+      [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]].forEach(function (m) { add(r + m[0], c + m[1]); });
+    } else if (t === 'k') {
+      for (j = -1; j <= 1; j++) for (k = -1; k <= 1; k++) if (j || k) add(r + j, c + k);
+    } else {
+      var dirs = [];
+      if (t !== 'b') dirs.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+      if (t !== 'r') dirs.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+      dirs.forEach(function (d) { for (k = 1; k < 8; k++) if (!add(r + d[0] * k, c + d[1] * k)) break; });
+    }
+    return out;
+  }
+  function chessApply(b, f, to) {
+    var a = b.split(''), pc = a[f];
+    a[f] = '.';
+    if (pc === 'P' && to < 8) pc = 'Q'; else if (pc === 'p' && to > 55) pc = 'q';
+    a[to] = pc;
+    return a.join('');
+  }
+  function chessInCheck(b, col) {
+    var kp = b.indexOf(col === 'w' ? 'K' : 'k'), oc = col === 'w' ? 'b' : 'w';
+    if (kp < 0) return true;
+    for (var i = 0; i < 64; i++) if (chColor(b.charAt(i)) === oc && chessPseudo(b, oc, i).indexOf(kp) >= 0) return true;
+    return false;
+  }
+  function chessLegal(b, col, i) {
+    if (chColor(b.charAt(i)) !== col) return [];
+    return chessPseudo(b, col, i).filter(function (to) { return !chessInCheck(chessApply(b, i, to), col); });
+  }
+  function chessHasMove(b, col) {
+    for (var i = 0; i < 64; i++) if (chColor(b.charAt(i)) === col && chessLegal(b, col, i).length) return true;
+    return false;
+  }
+  function chessView(st, seat) {
+    var ch = st.ch, wrap = h('div', { class: 'chess' });
+    var myCol = seat < 0 ? 'w' : (seat === ch.w ? 'w' : 'b');
+    if (S.chSelB !== ch.b + st.round) { S.chSel = -1; S.chSelB = ch.b + st.round; }
+    var moves = S.chSel >= 0 && seat === st.turn && !st.over ? chessLegal(ch.b, myCol, S.chSel) : [];
+    var kp = ch.chk ? ch.b.indexOf(st.turn === ch.w ? 'K' : 'k') : -1;
+    for (var n = 0; n < 64; n++) {
+      var i = myCol === 'w' ? n : 63 - n, r = Math.floor(i / 8), c = i % 8, pc = ch.b.charAt(i);
+      var cls = 'sq' + ((r + c) % 2 ? ' dk' : '');
+      if (ch.last && (ch.last[0] === i || ch.last[1] === i)) cls += ' lm';
+      if (i === kp) cls += ' chk';
+      if (i === S.chSel) cls += ' sel';
+      if (moves.indexOf(i) >= 0) cls += ' mv';
+      var kids = null;
+      if (pc !== '.') {
+        var own = chColor(pc) === 'w' ? ch.w : 1 - ch.w;
+        kids = h('span', { class: 'pc', style: 'color:' + (own === 0 ? 'var(--p0)' : 'var(--p1)') }, CH_GLYPH[pc.toLowerCase()] + '\uFE0E');
+      }
+      wrap.append(h('button', { class: cls, 'aria-label': 'Square ' + 'abcdefgh'.charAt(c) + (8 - r), onclick: (function (idx) { return function () {
+        if (seat !== st.turn || st.over) return;
+        if (moves.indexOf(idx) >= 0) { var f = S.chSel; S.chSel = -1; doAct({ t: 'move', f: f, to: idx }); return; }
+        S.chSel = chColor(ch.b.charAt(idx)) === myCol ? idx : -1; render();
+      }; })(i) }, kids));
+    }
+    return wrap;
   }
   function tttView(st, seat) {
     var g = h('div', { class: 'ttt' });
@@ -1348,7 +1556,7 @@ input[type="text"] {
       if (!f[k] || !d[k]) return;
       for (var i = 0; i < f[k].length; i++) { var dv = f[k][i] - d[k][i]; d[k][i] = Math.abs(dv) > 90 ? f[k][i] : d[k][i] + dv * 0.4; }
     });
-    d.ph = f.ph; d.cd = f.cd; d.s = f.s;
+    for (var kk in f) if (['b', 'p', 'pk', 'm'].indexOf(kk) < 0) d[kk] = f[kk];
     return d;
   }
   function disc(c, x, y, r, fill, stroke) {
@@ -1375,6 +1583,57 @@ input[type="text"] {
       disc(c, 160, 160, 140, C.sf, C.ink);
       disc(c, d.p[0], d.p[1], 20, C.p0, C.ink);
       disc(c, d.p[2], d.p[3], 20, C.p1, C.ink);
+    },
+    paint: function (c, d, C) {
+      var k;
+      for (k = 0; k < 300; k++) {
+        var v = d.gr.charAt(k);
+        if (v === '0') continue;
+        c.fillStyle = v === '1' ? C.p0 : C.p1; c.globalAlpha = 0.75;
+        c.fillRect((k % 15) * 20, Math.floor(k / 15) * 20, 20, 20);
+      }
+      c.globalAlpha = 1;
+      c.strokeStyle = C.line; c.lineWidth = 1;
+      for (k = 1; k < 15; k++) { c.beginPath(); c.moveTo(k * 20, 0); c.lineTo(k * 20, 400); c.stroke(); }
+      for (k = 1; k < 20; k++) { c.beginPath(); c.moveTo(0, k * 20); c.lineTo(300, k * 20); c.stroke(); }
+      disc(c, d.p[0], d.p[1], 12, C.p0, C.ink); disc(c, d.p[2], d.p[3], 12, C.p1, C.ink);
+      var tot = d.n[0] + d.n[1] || 1;
+      c.fillStyle = C.p0; c.fillRect(0, 0, 300 * d.n[0] / tot, 8);
+      c.fillStyle = C.p1; c.fillRect(300 - 300 * d.n[1] / tot, 0, 300 * d.n[1] / tot, 8);
+      c.fillStyle = C.ink; c.font = '800 26px "Bricolage Grotesque", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.globalAlpha = 0.8; c.fillText(String(d.left), 150, 396); c.globalAlpha = 1;
+    },
+    sword: function (c, d, C) {
+      c.fillStyle = C.sf; c.fillRect(2, 2, 316, 316); c.strokeStyle = C.ink; c.lineWidth = 3; c.strokeRect(2, 2, 316, 316);
+      for (var i = 0; i < 2; i++) {
+        var x = d.p[i * 2], y = d.p[i * 2 + 1], col = i === 0 ? C.p0 : C.p1;
+        c.strokeStyle = C.ink; c.lineWidth = 7; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(d.a[i]) * 36, y + Math.sin(d.a[i]) * 36); c.stroke();
+        c.strokeStyle = col; c.lineWidth = 3.5; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(d.a[i]) * 36, y + Math.sin(d.a[i]) * 36); c.stroke();
+        c.globalAlpha = d.inv[i] ? 0.45 : 1; disc(c, x, y, 17, col, C.ink); c.globalAlpha = 1;
+        for (var h2 = 0; h2 < 3; h2++) { c.beginPath(); c.arc(i === 0 ? 16 + h2 * 16 : 304 - h2 * 16, 20, 5, 0, Math.PI * 2); c.fillStyle = h2 < d.hp[i] ? col : 'transparent'; c.fill(); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); }
+      }
+    },
+    road: function (c, d, C) {
+      c.fillStyle = C.sf; c.fillRect(0, 0, 300, 480);
+      c.fillStyle = C.line;
+      for (var k = -1; k < 9; k++) c.fillRect(146, k * 60 + d.off, 8, 30);
+      c.fillStyle = C.ink; c.fillRect(0, 0, 6, 480); c.fillRect(294, 0, 6, 480);
+      for (var j = 0; j < d.ob.length; j += 2) {
+        c.fillStyle = '#c98a2b'; c.fillRect(d.ob[j] - 18, d.ob[j + 1] - 18, 36, 36);
+        c.strokeStyle = C.ink; c.lineWidth = 3; c.strokeRect(d.ob[j] - 18, d.ob[j + 1] - 18, 36, 36);
+        c.beginPath(); c.moveTo(d.ob[j] - 18, d.ob[j + 1] - 18); c.lineTo(d.ob[j] + 18, d.ob[j + 1] + 18); c.moveTo(d.ob[j] + 18, d.ob[j + 1] - 18); c.lineTo(d.ob[j] - 18, d.ob[j + 1] + 18); c.stroke();
+      }
+      for (var i = 0; i < 2; i++) {
+        var col = i === 0 ? C.p0 : C.p1, x = d.p[i];
+        if (d.hp[i] > 0) {
+          c.globalAlpha = d.inv[i] ? 0.45 : (i === 1 ? 0.92 : 1);
+          c.fillStyle = col; c.fillRect(x - 15, 396, 30, 48); c.strokeStyle = C.ink; c.lineWidth = 3; c.strokeRect(x - 15, 396, 30, 48);
+          c.fillStyle = C.ink; c.fillRect(x - 10, 404, 20, 9); c.globalAlpha = 1;
+        }
+        for (var h2 = 0; h2 < 3; h2++) { c.beginPath(); c.arc(i === 0 ? 20 + h2 * 16 : 280 - h2 * 16, 20, 5, 0, Math.PI * 2); c.fillStyle = h2 < d.hp[i] ? col : 'transparent'; c.fill(); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); }
+      }
+      c.fillStyle = C.ink; c.font = '800 22px "Bricolage Grotesque", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.globalAlpha = 0.7; c.fillText(String(d.left), 150, 30); c.globalAlpha = 1;
     },
     snake: function (c, d, C) {
       var cols = [C.p0, C.p1];
