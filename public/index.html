@@ -202,6 +202,9 @@ input[type="text"] {
 .meter { position: relative; height: 20px; border-radius: 10px; background: var(--cell); overflow: hidden; }
 .meter .fill { height: 100%; width: 0; background: var(--ink); }
 .meter .tick { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--good); }
+.fmark { position: relative; height: 8px; margin-top: -2px; }
+.fmark .ftick { position: absolute; top: 0; bottom: 0; width: 5px; margin-left: -2.5px; background: var(--good); border-radius: 2.5px; }
+.fval { font-variant-numeric: tabular-nums; }
 .lane { display: block; width: min(100%, 300px); margin: 0 auto; }
 .sv-board { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
 .sv-hole { fill: var(--cell); stroke: var(--ink); stroke-width: 2; }
@@ -1373,6 +1376,24 @@ input[type="text"] {
       h('button', { class: 'btn', onclick: function () { go(+slider.value, meterPower()); } }, btn));
     return wrap;
   }
+  function forceControls(tick, go) {
+    var wrap = h('div', { class: 'ctl' });
+    var slider = h('input', { type: 'range', min: '-100', max: '100', value: String(S.aimVal || 0), 'aria-label': 'Aim left or right' });
+    slider.addEventListener('input', function () { S.aimVal = +slider.value; });
+    var force = h('input', { type: 'range', min: '0', max: '100', value: '0', 'aria-label': 'Shot force: drag to set, release to shoot' });
+    var readout = h('span', { class: 'fval', text: '0%' });
+    force.addEventListener('input', function () { readout.textContent = force.value + '%'; });
+    force.addEventListener('change', function () {
+      var pow = +force.value / 100;
+      force.value = '0'; readout.textContent = '0%';
+      if (pow >= 0.02) go(+slider.value, pow);
+    });
+    wrap.append(h('div', { class: 'label', text: 'Aim' }), slider,
+      h('div', { class: 'label' }, 'Force: drag to set, release to shoot ', readout),
+      force,
+      h('div', { class: 'fmark' }, h('div', { class: 'ftick', style: 'left:' + (tick * 100) + '%' })));
+    return wrap;
+  }
   function chView(st, seat) {
     var c = st.ch, box = h('div', { class: 'ctl' });
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1439,10 +1460,10 @@ input[type="text"] {
     str += '<circle cx="' + Math.round(bx) + '" cy="' + Math.round(by) + '" r="7" class="sv-ball8"/>';
     svg.innerHTML = str;
     box.append(svg);
-    var lastTxt = p.last ? (p.last.pot ? nm(p.last.s) + ' potted it!' : nm(p.last.s) + ' missed') : 'Aim at the black ball, then time the power';
+    var lastTxt = p.last ? (p.last.pot ? nm(p.last.s) + ' potted it!' : nm(p.last.s) + ' missed') : 'Aim at the black ball and set force near the green mark';
     box.append(h('div', { class: 'small muted tc', text: nm(0) + ' ' + p.pts[0] + ' \u2013 ' + p.pts[1] + ' ' + nm(1) + ' \u00b7 Shot ' + Math.min(p.shot + 1, 12) + ' of 12. ' + lastTxt }));
     if (!st.over && seat >= 0 && st.turn === seat) {
-      box.append(aimControls(lie[1], 'Power: tap Shoot when the bar reaches the green mark', 'Shoot', function (aim, pow) { doAct({ t: 'pool', aim: aim, pow: pow }); }));
+      box.append(forceControls(lie[1], function (aim, pow) { doAct({ t: 'pool', aim: aim, pow: pow }); }));
     }
     return box;
   }
@@ -1470,7 +1491,7 @@ input[type="text"] {
     });
     box.append(tally);
     if (!st.over && seat >= 0 && st.turn === seat) {
-      box.append(aimControls(g.dist / (g.dist + 60), 'Power: tap Putt when the bar reaches the green mark', 'Putt', function (aim, pow) { doAct({ t: 'golf', aim: aim, pow: pow }); }));
+      box.append(forceControls(g.dist / (g.dist + 60), function (aim, pow) { doAct({ t: 'golf', aim: aim, pow: pow }); }));
     }
     return box;
   }
