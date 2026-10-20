@@ -311,7 +311,7 @@ input[type="text"] {
     paint: { name: 'Paint Fight', desc: 'Cover more of the paper in your color' },
     sword: { name: 'Sword Duel', desc: 'Dodge the spinning blade, land hits' },
     road: { name: 'Road Rush', desc: 'Steer clear of the falling crates' },
-    pool: { name: 'Pool', desc: 'Six shots each, most pots wins' },
+    pool: { name: 'Pool', desc: 'Six shots each, most pots wins; ties go to sudden death' },
     golf: { name: 'Minigolf', desc: 'Three holes, fewest putts wins' }
   };
   var ICONS = {
@@ -855,7 +855,10 @@ input[type="text"] {
     p.last = { s: seat, err: Math.round(err * 10) / 10, pot: pot, lie: lie };
     p.shot++; st.turn = 1 - st.turn;
     var n = p.shot;
-    if (n >= 12 && n % 2 === 0 && p.pts[0] !== p.pts[1]) finish(p.pts[0] > p.pts[1] ? 0 : 1);
+    if (n >= 12 && n % 2 === 0) {
+      if (p.pts[0] !== p.pts[1]) finish(p.pts[0] > p.pts[1] ? 0 : 1);
+      else if (n >= 24) finish('draw');
+    }
   }
   var GDIST = [90, 140, 190];
   function golfPutt(seat, aim, pow) {
