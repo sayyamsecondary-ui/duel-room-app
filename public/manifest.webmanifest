@@ -1,7 +1,7 @@
 {
   "name": "Duel Room",
   "short_name": "Duel Room",
-  "description": "Two phones, one room code, fourteen quick games.",
+  "description": "Two phones, one room code, 19 quick games.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

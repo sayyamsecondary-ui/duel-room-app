@@ -141,14 +141,6 @@ input[type="text"] {
 .disc.p1 { background: var(--p1); }
 .disc.win { box-shadow: 0 0 0 3px var(--ink); }
 
-.chess { display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 12px; overflow: hidden; max-width: 440px; margin: 0 auto; border: 3px solid var(--ink); }
-.sq { aspect-ratio: 1; border: 0; padding: 0; margin: 0; display: grid; place-items: center; cursor: pointer; font-size: min(8.4vw, 36px); line-height: 1; background: #ecdfc8; font-family: 'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols',sans-serif; }
-.sq.dk { background: #b58f6a; }
-.sq.sel { background: #f2d45c; }
-.sq.mv { box-shadow: inset 0 0 0 4px rgba(40,160,80,.75); }
-.sq.lm { background: #cfe08a; }
-.sq.chk { background: #e8826f; }
-.sq .pc { text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 1px 2px rgba(0,0,0,.5); }
 .picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .pick { font: 700 14px var(--font-body); color: var(--ink); background: var(--surface); border: 3px solid var(--line); border-radius: 16px; padding: 18px 6px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
 .pick .ico { width: 44px; height: 44px; }
@@ -217,6 +209,14 @@ input[type="text"] {
 .sv-bag.p0 { fill: var(--p0); }
 .sv-bag.p1 { fill: var(--p1); }
 .sv-bag.miss { opacity: 0.45; }
+.sv-shot { stroke-width: 3; fill: none; }
+.sv-shot.p0 { stroke: var(--p0); }
+.sv-shot.p1 { stroke: var(--p1); }
+.sv-shot.miss { stroke-dasharray: 5 4; opacity: 0.7; }
+.sv-cue { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.sv-ball8 { fill: var(--ink); }
+.sv-pole { stroke: var(--ink); stroke-width: 2; }
+.sv-flag { fill: var(--bad); }
 .sv-lane { fill: var(--surface); }
 .sv-gut { fill: var(--cell); }
 .sv-pin { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
@@ -241,7 +241,7 @@ input[type="text"] {
       <svg viewBox="0 0 64 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="var(--p0)"/><circle cx="44" cy="20" r="18" fill="var(--p1)" fill-opacity="0.92"/></svg>
       <h1>Duel Room</h1>
     </div>
-    <p class="muted">Two phones, one room code, four quick games. Make a room, give your friend the code, and play.</p>
+    <p class="muted">Two phones, one room code, 19 quick games. Make a room, give your friend the code, and play.</p>
     <div id="homeMsg" class="warn" hidden></div>
     <div class="panel">
       <div class="field">
@@ -311,7 +311,8 @@ input[type="text"] {
     paint: { name: 'Paint Fight', desc: 'Cover more of the paper in your color' },
     sword: { name: 'Sword Duel', desc: 'Dodge the spinning blade, land hits' },
     road: { name: 'Road Rush', desc: 'Steer clear of the falling crates' },
-    chess: { name: 'Chess', desc: 'Classic chess, checkmate wins' }
+    pool: { name: 'Pool', desc: 'Six shots each, most pots wins' },
+    golf: { name: 'Minigolf', desc: 'Three holes, fewest putts wins' }
   };
   var ICONS = {
     ttt: '<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',
@@ -331,7 +332,8 @@ input[type="text"] {
     paint: '<path d="M5 19c0-4 3-3 3-6 0-2 2-3 4-3s4 2 4 5c0 2 3 1 3 4z"/><circle cx="8" cy="6" r="1.8"/><circle cx="16" cy="5" r="1.4"/>',
     sword: '<path d="M5 19L18 6M15 4h5v5M4 16l4 4M3 21l3-3"/>',
     road: '<path d="M8 3L5 21M16 3l3 18M12 5v3M12 11v3M12 17v3"/>',
-    chess: '<path d="M8 20h8M9 20c0-4 1-5 1-8-2-1-2-3-1-5l3-3 3 3c1 2 1 4-1 5 0 3 1 4 1 8"/>',
+    pool: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="10" r="3"/>',
+    golf: '<path d="M13 21V4"/><path d="M13 5l7 2.5-7 2.5"/><ellipse cx="8" cy="20.5" rx="5" ry="1.7"/>',
     r: '<circle cx="12" cy="12" r="7"/>',
     p: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8.5 9h7M8.5 13h7"/>',
     s: '<circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M9 14.5L17 4M15 14.5L7 4"/>'
@@ -838,6 +840,47 @@ input[type="text"] {
     if (b.fs[0].length === b.fs[1].length && b.fs[0].length >= 5 && b.tot[0] !== b.tot[1]) finish(b.tot[0] > b.tot[1] ? 0 : 1);
   }
 
+  /* ---------- pool and minigolf (turn based, host decides the result) ---------- */
+  var PDIST = [0.4, 0.62, 0.85];
+  function poolShoot(seat, aim, pow) {
+    var st = S.st, p = st.pl;
+    if (st.game !== 'pool' || st.over || !p || seat !== st.turn) return;
+    aim = clamp(+aim || 0, -100, 100); pow = clamp(+pow || 0, 0, 1);
+    var lie = p.lies[p.shot % p.lies.length];
+    var err = aim / 100 * 60 - lie[0] + gauss() * 2.5;
+    var pe = clamp(1 - Math.abs(pow - lie[1]) * 4, 0, 1);
+    var tol = 0.8 + 2.2 * pe;
+    var pot = Math.abs(err) < tol && pe > 0.15;
+    if (pot) p.pts[seat]++;
+    p.last = { s: seat, err: Math.round(err * 10) / 10, pot: pot, lie: lie };
+    p.shot++; st.turn = 1 - st.turn;
+    var n = p.shot;
+    if (n >= 12 && n % 2 === 0 && p.pts[0] !== p.pts[1]) finish(p.pts[0] > p.pts[1] ? 0 : 1);
+  }
+  var GDIST = [90, 140, 190];
+  function golfPutt(seat, aim, pow) {
+    var st = S.st, g = st.gf;
+    if (st.game !== 'golf' || st.over || !g || seat !== st.turn) return;
+    aim = clamp(+aim || 0, -100, 100); pow = clamp(+pow || 0, 0, 1);
+    var err = (aim / 100 * 25 + gauss() * 3.5) * Math.PI / 180;
+    var travel = pow * (g.dist + 60);
+    var rem = Math.sqrt(g.dist * g.dist + travel * travel - 2 * g.dist * travel * Math.cos(err));
+    g.putt++;
+    var holed = rem < 4;
+    g.last = { s: seat, holed: holed, left: Math.round(rem), putt: g.putt };
+    if (holed || g.putt >= 3) {
+      var score = holed ? g.putt : 4;
+      g.fs[seat].push(score); g.tot[seat] += score;
+      g.putt = 0;
+      if (g.fs[0].length >= GDIST.length && g.fs[1].length >= GDIST.length) {
+        finish(g.tot[0] === g.tot[1] ? 'draw' : (g.tot[0] < g.tot[1] ? 0 : 1));
+        return;
+      }
+      st.turn = 1 - seat;
+      g.dist = GDIST[g.fs[st.turn].length];
+    } else g.dist = rem;
+  }
+
   /* ---------- host game logic ---------- */
   function freshState() {
     return { v: 0, phase: 'menu', game: null, scores: [0, 0], names: [clean($('nick').value) || 'Player', ''], guest: null, turn: 0, starter: 1, round: 0, over: false, result: null, win: null, board: [], rps: null, tap: null, math: null, mode: 'single', tour: null };
@@ -855,7 +898,7 @@ input[type="text"] {
     newRound();
   }
   function startTour() {
-    var st = S.st, keys = Object.keys(GAMES).filter(function (k) { return k !== 'chess'; });
+    var st = S.st, keys = Object.keys(GAMES);
     for (var i = keys.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = keys[i]; keys[i] = keys[j]; keys[j] = t; }
     keys = keys.slice(0, 5);
     st.mode = 'tour'; st.tour = { games: keys, idx: 0, res: [], done: false };
@@ -871,8 +914,8 @@ input[type="text"] {
       if (st.tour.idx >= st.tour.games.length) {
         if (st.scores[0] !== st.scores[1]) { st.tour.done = true; return; }
         var last = st.tour.games[st.tour.games.length - 1];
-        var pool = Object.keys(GAMES).filter(function (k) { return k !== last && k !== 'chess'; });
-        st.tour.games.push(pool[Math.floor(Math.random() * pool.length)]);
+        var rest = Object.keys(GAMES).filter(function (k) { return k !== last; });
+        st.tour.games.push(rest[Math.floor(Math.random() * rest.length)]);
       }
       st.game = st.tour.games[st.tour.idx];
     }
@@ -915,8 +958,13 @@ input[type="text"] {
     st.gw = st.game === 'who' ? { seed: Math.floor(Math.random() * 1e9), phase: 'pick', picked: [false, false], log: [], reveal: null, guess: null } : null;
     st.find = null; hostFind = null;
     st.ch = st.game === 'cornhole' ? { shot: 0, pts: [0, 0], bags: [], last: null } : null;
-    st.ch = st.game === 'chess' ? { b: CH_START, w: st.turn, last: null, chk: false } : null;
     st.bw = st.game === 'bowl' ? { pins: new Array(10).fill(true), roll: 0, rolls: [], tot: [0, 0], fs: [[], []], lastRoll: null } : null;
+    st.pl = null;
+    if (st.game === 'pool') {
+      st.pl = { shot: 0, pts: [0, 0], last: null, lies: [] };
+      for (var li = 0; li < 6; li++) st.pl.lies.push([Math.round(Math.random() * 50 - 25), PDIST[li % 3]]);
+    }
+    st.gf = st.game === 'golf' ? { dist: GDIST[0], putt: 0, fs: [[], []], tot: [0, 0], last: null } : null;
     if (st.game === 'odd') {
       var pr = PAIRS[Math.floor(Math.random() * PAIRS.length)];
       if (Math.random() < 0.5) pr = [pr[1], pr[0]];
@@ -967,6 +1015,8 @@ input[type="text"] {
       case 'find': findTap(seat, a.i); break;
       case 'ch': chThrow(seat, a.aim, a.pow); break;
       case 'bowl': bowlRoll(seat, a.aim, a.pow); break;
+      case 'pool': poolShoot(seat, a.aim, a.pow); break;
+      case 'golf': golfPutt(seat, a.aim, a.pow); break;
       case 'gwpick': gwPick(seat, a.i); break;
       case 'gwask': gwAsk(seat, a.k); break;
       case 'gwguess': gwGuess(seat, a.i); break;
@@ -988,15 +1038,6 @@ input[type="text"] {
       LINES.forEach(function (L) { if (!w && b[L[0]] === seat && b[L[1]] === seat && b[L[2]] === seat) w = L; });
       full = b.every(function (v) { return v !== -1; });
       if (w) finish(seat, w); else if (full) finish('draw'); else st.turn = 1 - seat;
-    } else if (st.game === 'chess') {
-      var ch = st.ch, col = seat === ch.w ? 'w' : 'b', f = a.f, to = a.to;
-      if (!ch || !Number.isInteger(f) || !Number.isInteger(to) || f < 0 || f > 63 || to < 0 || to > 63) return;
-      var lm = chessLegal(ch.b, col, f);
-      if (lm.indexOf(to) < 0) return;
-      ch.b = chessApply(ch.b, f, to); ch.last = [f, to];
-      var oc = col === 'w' ? 'b' : 'w', has = chessHasMove(ch.b, oc);
-      ch.chk = chessInCheck(ch.b, oc);
-      if (!has) finish(ch.chk ? seat : 'draw'); else st.turn = 1 - seat;
     } else if (st.game === 'c4') {
       var c = a.c;
       if (!Number.isInteger(c) || c < 0 || c > 6) return;
@@ -1191,8 +1232,7 @@ input[type="text"] {
       if (st.result === 'draw') return 'Draw';
       return st.result === seat ? 'You win' : nm(st.result) + ' wins';
     }
-    if (st.game === 'chess') return (st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn') + (st.ch && st.ch.chk ? ' (check)' : '');
-    if (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess') return st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn';
+    if (st.game === 'ttt' || st.game === 'c4') return st.turn === seat ? 'Your turn' : nm(st.turn) + '’s turn';
     if (st.game === 'rps') {
       if (seat >= 0 && st.rps.locked[seat]) return 'Locked in. Waiting for ' + nm(1 - seat);
       return 'Choose one';
@@ -1208,6 +1248,8 @@ input[type="text"] {
     if (st.game === 'odd') return st.find.phase === 'go' ? 'Find the different symbol' : 'Get ready';
     if (st.game === 'cornhole') return st.turn === seat ? 'Your throw' : nm(st.turn) + ' is up';
     if (st.game === 'bowl') return st.turn === seat ? 'Your roll' + (st.bw.roll ? ' (second ball)' : '') : nm(st.turn) + ' is up';
+    if (st.game === 'pool') return st.turn === seat ? 'Your shot' : nm(st.turn) + ' is lining up';
+    if (st.game === 'golf') return st.turn === seat ? 'Your putt' : nm(st.turn) + ' is putting';
     if (st.game === 'who') {
       var g = st.gw;
       if (g.phase === 'pick') return seat >= 0 && g.picked[seat] ? 'Waiting for ' + nm(1 - seat) + ' to choose' : 'Choose your secret person';
@@ -1245,7 +1287,7 @@ input[type="text"] {
     } else pips.hidden = true;
     var sc = $('score'); sc.replaceChildren();
     [0, 1].forEach(function (i) {
-      var active = !st.over && (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess' || st.game === 'cornhole' || st.game === 'bowl') && st.turn === i;
+      var active = !st.over && (st.game === 'ttt' || st.game === 'c4' || st.game === 'cornhole' || st.game === 'bowl' || st.game === 'pool' || st.game === 'golf') && st.turn === i;
       sc.append(h('div', { class: 'pl p' + i + (active ? ' active' : '') },
         h('div', { class: 'who' }, h('span', { class: 'dot p' + i }), h('span', { text: nm(i) + (seat === i ? ' (you)' : '') })),
         h('div', { class: 'n', text: String(st.scores[i]) })));
@@ -1253,7 +1295,7 @@ input[type="text"] {
     var stat = $('status');
     var tourDone = st.mode === 'tour' && st.tour && st.tour.done;
     stat.textContent = tourDone ? finalText(st, seat) : statusText(st, seat);
-    stat.className = 'status' + ((!st.over && st.turn === seat && (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess' || st.game === 'cornhole' || st.game === 'bowl')) ? ' mine' : '');
+    stat.className = 'status' + ((!st.over && st.turn === seat && (st.game === 'ttt' || st.game === 'c4' || st.game === 'cornhole' || st.game === 'bowl' || st.game === 'pool' || st.game === 'golf')) ? ' mine' : '');
     var body = $('body'); body.replaceChildren(); S.meterEl = null;
     if (st.round !== S.pickRound) {
       S.pickRound = st.round; S.myPick = null; S.frame = null; S.disp = null; S.trail = [new Set(), new Set()]; S.snN = -1; S.pendingIn = null; S.sentIn = ''; S.gwSel = null; S.gwOut = new Set(); S.gwMine = null;
@@ -1261,7 +1303,6 @@ input[type="text"] {
     if (tourDone) body.append(finalView(st));
     else if (st.game === 'ttt') body.append(tttView(st, seat));
     else if (st.game === 'c4') body.append(c4View(st, seat));
-    else if (st.game === 'chess') body.append(chessView(st, seat));
     else if (st.game === 'rps') body.append(rpsView(st, seat));
     else if (st.game === 'tap') body.append(tapView(st, seat));
     else if (st.game === 'math') body.append(mathView(st, seat));
@@ -1269,6 +1310,8 @@ input[type="text"] {
     else if (st.game === 'odd') body.append(oddView(st, seat));
     else if (st.game === 'cornhole') body.append(chView(st, seat));
     else if (st.game === 'bowl') body.append(bowlView(st, seat));
+    else if (st.game === 'pool') body.append(poolView(st, seat));
+    else if (st.game === 'golf') body.append(golfView(st, seat));
     else if (st.game === 'who') body.append(whoView(st, seat));
     else if (RT[st.game]) body.append(rtView(st, seat));
     var again = $('again');
@@ -1276,85 +1319,7 @@ input[type="text"] {
     if (st.mode === 'tour' && st.tour) {
       var lastGame = st.tour.idx + 1 >= st.tour.games.length;
       again.textContent = st.tour.done ? 'Back to games' : st.result === 'draw' ? 'Draw. Replay this game' : lastGame ? (st.scores[0] === st.scores[1] ? 'Tied. Play a decider' : 'See the result') : 'Next game';
-    } else again.textContent = (st.game === 'ttt' || st.game === 'c4' || st.game === 'chess') ? 'Play again' : 'Next round';
-  }
-  /* ---------- chess (no castling or en passant, pawns promote to queens) ---------- */
-  var CH_START = 'rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR';
-  var CH_GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-  function chColor(ch) { return ch === '.' ? null : (ch === ch.toUpperCase() ? 'w' : 'b'); }
-  function chessPseudo(b, col, i) {
-    var pc = b.charAt(i), t = pc.toLowerCase(), r = Math.floor(i / 8), c = i % 8, out = [], k, j;
-    function add(rr, cc, mode) {
-      if (rr < 0 || rr > 7 || cc < 0 || cc > 7) return false;
-      var q = b.charAt(rr * 8 + cc), qc = chColor(q);
-      if (mode === 'cap') { if (qc && qc !== col) out.push(rr * 8 + cc); return false; }
-      if (mode === 'mov') { if (!qc) { out.push(rr * 8 + cc); return true; } return false; }
-      if (qc === col) return false;
-      out.push(rr * 8 + cc);
-      return !qc;
-    }
-    if (t === 'p') {
-      var dir = col === 'w' ? -1 : 1, start = col === 'w' ? 6 : 1;
-      if (add(r + dir, c, 'mov') && r === start) add(r + 2 * dir, c, 'mov');
-      add(r + dir, c - 1, 'cap'); add(r + dir, c + 1, 'cap');
-    } else if (t === 'n') {
-      [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]].forEach(function (m) { add(r + m[0], c + m[1]); });
-    } else if (t === 'k') {
-      for (j = -1; j <= 1; j++) for (k = -1; k <= 1; k++) if (j || k) add(r + j, c + k);
-    } else {
-      var dirs = [];
-      if (t !== 'b') dirs.push([1, 0], [-1, 0], [0, 1], [0, -1]);
-      if (t !== 'r') dirs.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
-      dirs.forEach(function (d) { for (k = 1; k < 8; k++) if (!add(r + d[0] * k, c + d[1] * k)) break; });
-    }
-    return out;
-  }
-  function chessApply(b, f, to) {
-    var a = b.split(''), pc = a[f];
-    a[f] = '.';
-    if (pc === 'P' && to < 8) pc = 'Q'; else if (pc === 'p' && to > 55) pc = 'q';
-    a[to] = pc;
-    return a.join('');
-  }
-  function chessInCheck(b, col) {
-    var kp = b.indexOf(col === 'w' ? 'K' : 'k'), oc = col === 'w' ? 'b' : 'w';
-    if (kp < 0) return true;
-    for (var i = 0; i < 64; i++) if (chColor(b.charAt(i)) === oc && chessPseudo(b, oc, i).indexOf(kp) >= 0) return true;
-    return false;
-  }
-  function chessLegal(b, col, i) {
-    if (chColor(b.charAt(i)) !== col) return [];
-    return chessPseudo(b, col, i).filter(function (to) { return !chessInCheck(chessApply(b, i, to), col); });
-  }
-  function chessHasMove(b, col) {
-    for (var i = 0; i < 64; i++) if (chColor(b.charAt(i)) === col && chessLegal(b, col, i).length) return true;
-    return false;
-  }
-  function chessView(st, seat) {
-    var ch = st.ch, wrap = h('div', { class: 'chess' });
-    var myCol = seat < 0 ? 'w' : (seat === ch.w ? 'w' : 'b');
-    if (S.chSelB !== ch.b + st.round) { S.chSel = -1; S.chSelB = ch.b + st.round; }
-    var moves = S.chSel >= 0 && seat === st.turn && !st.over ? chessLegal(ch.b, myCol, S.chSel) : [];
-    var kp = ch.chk ? ch.b.indexOf(st.turn === ch.w ? 'K' : 'k') : -1;
-    for (var n = 0; n < 64; n++) {
-      var i = myCol === 'w' ? n : 63 - n, r = Math.floor(i / 8), c = i % 8, pc = ch.b.charAt(i);
-      var cls = 'sq' + ((r + c) % 2 ? ' dk' : '');
-      if (ch.last && (ch.last[0] === i || ch.last[1] === i)) cls += ' lm';
-      if (i === kp) cls += ' chk';
-      if (i === S.chSel) cls += ' sel';
-      if (moves.indexOf(i) >= 0) cls += ' mv';
-      var kids = null;
-      if (pc !== '.') {
-        var own = chColor(pc) === 'w' ? ch.w : 1 - ch.w;
-        kids = h('span', { class: 'pc', style: 'color:' + (own === 0 ? 'var(--p0)' : 'var(--p1)') }, CH_GLYPH[pc.toLowerCase()] + '\uFE0E');
-      }
-      wrap.append(h('button', { class: cls, 'aria-label': 'Square ' + 'abcdefgh'.charAt(c) + (8 - r), onclick: (function (idx) { return function () {
-        if (seat !== st.turn || st.over) return;
-        if (moves.indexOf(idx) >= 0) { var f = S.chSel; S.chSel = -1; doAct({ t: 'move', f: f, to: idx }); return; }
-        S.chSel = chColor(ch.b.charAt(idx)) === myCol ? idx : -1; render();
-      }; })(i) }, kids));
-    }
-    return wrap;
+    } else again.textContent = (st.game === 'ttt' || st.game === 'c4' || st.game === 'pool' || st.game === 'golf') ? 'Play again' : 'Next round';
   }
   function tttView(st, seat) {
     var g = h('div', { class: 'ttt' });
@@ -1448,6 +1413,61 @@ input[type="text"] {
     box.append(tally, h('div', { class: 'small muted tc', text: 'Frame ' + (b.fs[st.turn].length + 1) + ' of 5, ball ' + (b.roll + 1) }));
     if (!st.over && seat >= 0 && st.turn === seat) {
       box.append(aimControls(0.8, 'Power: tap Roll when the bar reaches the green mark', 'Roll', function (aim, pow) { doAct({ t: 'bowl', aim: aim, pow: pow }); }));
+    }
+    return box;
+  }
+  function poolView(st, seat) {
+    var p = st.pl, box = h('div', { class: 'ctl' });
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 300 170'); svg.setAttribute('class', 'lane'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Pool table');
+    var lie = p.lies[p.shot % p.lies.length];
+    var la = lie[0] * Math.PI / 180, dd = 60 + lie[1] * 90;
+    var bx = clamp(60 + Math.cos(la) * dd, 20, 280), by = clamp(85 - Math.sin(la) * dd, 20, 150);
+    var str = '<rect x="6" y="6" width="288" height="158" rx="12" class="sv-board"/>';
+    [[6, 6], [150, 6], [294, 6], [6, 164], [150, 164], [294, 164]].forEach(function (hxy) {
+      str += '<circle cx="' + hxy[0] + '" cy="' + hxy[1] + '" r="9" class="sv-hole"/>';
+    });
+    str += '<line x1="60" y1="85" x2="' + Math.round(bx) + '" y2="' + Math.round(by) + '" class="sv-path"/>';
+    if (p.last) {
+      var rad = (p.last.lie[0] + p.last.err) * Math.PI / 180, ex = 60 + Math.cos(rad) * 220, ey = 85 - Math.sin(rad) * 220;
+      str += '<line x1="60" y1="85" x2="' + Math.round(ex) + '" y2="' + Math.round(ey) + '" class="sv-shot p' + p.last.s + (p.last.pot ? '' : ' miss') + '"/>';
+    }
+    str += '<circle cx="60" cy="85" r="6" class="sv-cue"/>';
+    str += '<circle cx="' + Math.round(bx) + '" cy="' + Math.round(by) + '" r="7" class="sv-ball8"/>';
+    svg.innerHTML = str;
+    box.append(svg);
+    var lastTxt = p.last ? (p.last.pot ? nm(p.last.s) + ' potted it!' : nm(p.last.s) + ' missed') : 'Aim at the black ball, then time the power';
+    box.append(h('div', { class: 'small muted tc', text: nm(0) + ' ' + p.pts[0] + ' \u2013 ' + p.pts[1] + ' ' + nm(1) + ' \u00b7 Shot ' + Math.min(p.shot + 1, 12) + ' of 12. ' + lastTxt }));
+    if (!st.over && seat >= 0 && st.turn === seat) {
+      box.append(aimControls(lie[1], 'Power: tap Shoot when the bar reaches the green mark', 'Shoot', function (aim, pow) { doAct({ t: 'pool', aim: aim, pow: pow }); }));
+    }
+    return box;
+  }
+  function golfView(st, seat) {
+    var g = st.gf, box = h('div', { class: 'ctl' });
+    var dist = Math.round(g.dist);
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 210'); svg.setAttribute('class', 'lane'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Minigolf hole');
+    svg.style.width = 'min(100%, 170px)';
+    var hy = Math.round(192 - dist * 0.9);
+    var str = '<rect x="20" y="10" width="60" height="194" rx="10" class="sv-lane"/>';
+    str += '<line x1="50" y1="' + hy + '" x2="50" y2="' + (hy - 16) + '" class="sv-pole"/>';
+    str += '<path d="M50 ' + (hy - 16) + ' l10 3.5 -10 3.5 z" class="sv-flag"/>';
+    str += '<circle cx="50" cy="' + hy + '" r="6" class="sv-hole"/>';
+    str += '<line x1="50" y1="192" x2="50" y2="' + hy + '" class="sv-path"/>';
+    str += '<circle cx="50" cy="192" r="5" class="sv-ball"/>';
+    svg.innerHTML = str;
+    box.append(svg);
+    var holeNo = Math.min(g.fs[st.turn].length + 1, GDIST.length);
+    var lastTxt = g.last ? (g.last.holed ? nm(g.last.s) + ' holed it in ' + g.last.putt + '!' : nm(g.last.s) + ' left it ' + g.last.left + ' away') : 'Fewest putts wins, 3 putts a hole';
+    box.append(h('div', { class: 'small muted tc', text: 'Hole ' + holeNo + ' of ' + GDIST.length + ' \u00b7 putt ' + (g.putt + 1) + ' of 3 \u00b7 ' + dist + ' to go. ' + lastTxt }));
+    var tally = h('div', { class: 'log' });
+    [0, 1].forEach(function (i) {
+      tally.append(h('div', null, h('b', { text: nm(i) + ' ' + g.tot[i] }), h('span', { class: 'muted', text: g.fs[i].length ? '  holes: ' + g.fs[i].join(' \u00b7 ') : '' })));
+    });
+    box.append(tally);
+    if (!st.over && seat >= 0 && st.turn === seat) {
+      box.append(aimControls(g.dist / (g.dist + 60), 'Power: tap Putt when the bar reaches the green mark', 'Putt', function (aim, pow) { doAct({ t: 'golf', aim: aim, pow: pow }); }));
     }
     return box;
   }

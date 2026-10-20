@@ -1,5 +1,5 @@
 // Caches the app shell so Duel Room opens instantly and installs as an app. Game traffic is never cached.
-const CACHE = 'duel-room-v2';
+const CACHE = 'duel-room-v3';
 const SHELL = ['/', '/index.html', '/room-shim.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
