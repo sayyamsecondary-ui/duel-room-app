@@ -310,7 +310,7 @@ input[type="text"] {
     who: { name: 'Guess the Person', desc: 'Ask yes or no questions to find their person' },
     odd: { name: 'Odd One Out', desc: 'Find the different symbol first' },
     cornhole: { name: 'Cornhole', desc: 'Toss bags at the hole, 3 each' },
-    bowl: { name: 'Bowling', desc: 'Five frames, aim and time your roll' },
+    bowl: { name: 'Bowling', desc: 'Five frames, aim and set your force' },
     paint: { name: 'Paint Fight', desc: 'Cover more of the paper in your color' },
     sword: { name: 'Sword Duel', desc: 'Dodge the spinning blade, land hits' },
     road: { name: 'Road Rush', desc: 'Steer clear of the falling crates' },
@@ -1302,7 +1302,7 @@ input[type="text"] {
     var tourDone = st.mode === 'tour' && st.tour && st.tour.done;
     stat.textContent = tourDone ? finalText(st, seat) : statusText(st, seat);
     stat.className = 'status' + ((!st.over && st.turn === seat && (st.game === 'ttt' || st.game === 'c4' || st.game === 'cornhole' || st.game === 'bowl' || st.game === 'pool' || st.game === 'golf')) ? ' mine' : '');
-    var body = $('body'); body.replaceChildren(); S.meterEl = null;
+    var body = $('body'); body.replaceChildren(); 
     if (st.round !== S.pickRound) {
       S.pickRound = st.round; S.myPick = null; S.frame = null; S.disp = null; S.trail = [new Set(), new Set()]; S.snN = -1; S.pendingIn = null; S.sentIn = ''; S.gwSel = null; S.gwOut = new Set(); S.gwMine = null;
     }
@@ -1364,18 +1364,6 @@ input[type="text"] {
     });
     return picks;
   }
-  function meterPower() { return 0.5 - 0.5 * Math.cos((performance.now() % 1700) / 1700 * 2 * Math.PI); }
-  function aimControls(tick, label, btn, go) {
-    var wrap = h('div', { class: 'ctl' });
-    var slider = h('input', { type: 'range', min: '-100', max: '100', value: String(S.aimVal || 0), 'aria-label': 'Aim left or right' });
-    slider.addEventListener('input', function () { S.aimVal = +slider.value; });
-    var fill = h('div', { class: 'fill' });
-    var meter = h('div', { class: 'meter' }, fill, h('div', { class: 'tick', style: 'left:' + (tick * 100) + '%' }));
-    S.meterEl = fill;
-    wrap.append(h('div', { class: 'label', text: 'Aim' }), slider, h('div', { class: 'label', text: label }), meter,
-      h('button', { class: 'btn', onclick: function () { go(+slider.value, meterPower()); } }, btn));
-    return wrap;
-  }
   function forceControls(tick, go) {
     var wrap = h('div', { class: 'ctl' });
     var slider = h('input', { type: 'range', min: '-100', max: '100', value: String(S.aimVal || 0), 'aria-label': 'Aim left or right' });
@@ -1410,7 +1398,7 @@ input[type="text"] {
     var lastTxt = c.last === 'hole' ? 'Last throw: in the hole (+3)' : c.last === 'board' ? 'Last throw: on the board (+1)' : c.last === 'miss' ? 'Last throw: missed the board' : 'Hole is worth 3, board is worth 1';
     box.append(h('div', { class: 'small muted tc', text: nm(0) + ' ' + c.pts[0] + ' – ' + c.pts[1] + ' ' + nm(1) + ' · ' + c.shot + ' of 6 thrown. ' + lastTxt }));
     if (!st.over && seat >= 0 && st.turn === seat) {
-      box.append(aimControls(0.63, 'Power: tap Throw when the bar reaches the green mark', 'Throw', function (aim, pow) { doAct({ t: 'ch', aim: aim, pow: pow }); }));
+      box.append(forceControls(0.63, function (aim, pow) { doAct({ t: 'ch', aim: aim, pow: pow }); }));
     }
     return box;
   }
@@ -1436,7 +1424,7 @@ input[type="text"] {
     });
     box.append(tally, h('div', { class: 'small muted tc', text: 'Frame ' + (b.fs[st.turn].length + 1) + ' of 5, ball ' + (b.roll + 1) }));
     if (!st.over && seat >= 0 && st.turn === seat) {
-      box.append(aimControls(0.8, 'Power: tap Roll when the bar reaches the green mark', 'Roll', function (aim, pow) { doAct({ t: 'bowl', aim: aim, pow: pow }); }));
+      box.append(forceControls(0.8, function (aim, pow) { doAct({ t: 'bowl', aim: aim, pow: pow }); }));
     }
     return box;
   }
@@ -1722,7 +1710,6 @@ input[type="text"] {
   function loop() {
     requestAnimationFrame(loop);
     try {
-      if (S.meterEl && S.meterEl.isConnected) S.meterEl.style.width = (meterPower() * 100).toFixed(1) + '%';
       draw();
     } catch (e) {}
   }
